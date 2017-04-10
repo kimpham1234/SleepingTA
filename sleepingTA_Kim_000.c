@@ -17,40 +17,56 @@ sem_t ta_sem; //student wait for ta to help, ta notify student he is ready to he
 void* student_thread(void* param){
 	int order = (int)param;
 	int seed = (int)param*1000;
-	
+	int sleeptime = (rand_r(&seed)%3)+1;
 	int helptime = NUM_OF_HELPS;
-	while(helptime > 0){
-		int sleeptime = (rand_r(&seed)%3)+1;
-		printf("	Student %d is programming for %d seconds.\n", order, sleeptime);
-		//programming first
-		sleep(sleeptime);
+	printf("	Student %d is programming for %d seconds.\n", order, sleeptime);
+	sleep(sleeptime);
 
-		//attempt to get help
-		pthread_mutex_lock(&mutex_lock);
+	while(helptime > 0){
+
+	//	pthread_mutex_lock(&mutex_lock);
 		//critical section
 		if(waiting_students < 2){
+		//	pthread_mutex_lock(&mutex_lock);
 			if(waiting_students==0){
-				//printf("Student %d wake up ta from sleep\n", order);
+
+				pthread_mutex_lock(&mutex_lock);
 				waiting_students++;
-				printf("		Student %d takes a seat, # of waiting students = %d\n", order, waiting_students);
-				//printf("Waking TA up\n");
+				pthread_mutex_unlock(&mutex_lock);
+
+				printf("		Student %d takes a seat, # of waiting studentsA = %d\n", order, waiting_students);
 				sem_post(&students_sem);
+				sleep(sleeptime);
+				sem_wait(&ta_sem); //here
+				printf("Student %d receiving help\n", order);
+				helptime--;
 			}else{
+
+				pthread_mutex_lock(&mutex_lock);
 				waiting_students++;
+				pthread_mutex_unlock(&mutex_lock);
+
 				sem_post(&students_sem);
 				printf("		Student %d takes a seat, # of waiting students = %d\n", order, waiting_students);
 				sem_wait(&ta_sem);
+				printf("Student %d receiving help\n", order);
+				sleep(sleeptime);
+				helptime--;
 			}
-
-			printf("Student %d receiving help\n", order);
-			helptime--;
+		//	pthread_mutex_unlock(&mutex_lock);
+		//change 1 - uncomment this
+		//	printf("Student %d receiving help\n", order);
+		//	helptime--;
 		}else{ //go back to sleep
 			printf("			Student %d will try later.\n", order);
+			sleeptime = (rand_r(&seed)%3)+1;
+			printf("	Student %d is programming for %d seconds.\n", order, sleeptime);
 			sleep(sleeptime);
+
 		}
 
 		//end critical section
-		pthread_mutex_unlock(&mutex_lock);
+	//	pthread_mutex_unlock(&mutex_lock);
 	}
 
 	pthread_exit(NULL);
@@ -59,23 +75,17 @@ void* student_thread(void* param){
 void* ta_thread(void* param){
 	while(0==0){
 		sem_wait(&students_sem);
-		pthread_mutex_lock(&mutex_lock);
+	//	pthread_mutex_lock(&mutex_lock);
 		while(waiting_students > 0){
-			//printf("Ta woke up\n");
-		//	pthread_mutex_lock(&mutex_lock);
+			pthread_mutex_lock(&mutex_lock);
 			waiting_students--;
-		//	pthread_mutex_unlock(&mutex_lock);
+			pthread_mutex_unlock(&mutex_lock);
 		    sem_post(&ta_sem);	
+
 			printf("Helping a student for 3 seconds, # of waiting students = %d\n", waiting_students);
-			
 			sleep(MAX_SLEEP_TIME);
-		//	sem_post(&ta_sem);
-			//if(waiting_students > 0){
-			//	printf("notifying %d students waiting\n", waiting_students);
-			//	sem_post(&ta_sem);
-			//} change 1 - comment out this block, add the else if instead of else
 		}
-		pthread_mutex_unlock(&mutex_lock);
+	//	pthread_mutex_unlock(&mutex_lock);
 	}
 
 }
