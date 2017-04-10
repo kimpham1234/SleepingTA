@@ -17,37 +17,39 @@ sem_t ta_sem; //student wait for ta to help, ta notify student he is ready to he
 void* student_thread(void* param){
 	int order = (int)param;
 	int seed = (int)param*1000;
-	int sleeptime = (rand_r(&seed)%3)+1;
 	int helptime = NUM_OF_HELPS;
-	printf("Student %d is programming for %d seconds.\n", order, sleeptime);
-	//programming first
-	sleep(sleeptime);
-	
-	//attempt to get help
-	pthread_mutex_lock(&mutex_lock);
-	//critical section
-		if(waiting_students < 2){
+	while(0==0){
+		int sleeptime = (rand_r(&seed)%3)+1;
+		printf("	Student %d is programming for %d seconds.\n", order, sleeptime);
+		//programming first
+		sleep(sleeptime);
+		
+		pthread_mutex_lock(&mutex_lock);
+		//critical section
+		if(waiting_students < 3){
 			if(waiting_students==0){
-				printf("Student %d wake up ta from sleep\n", order);
 				waiting_students++;
-				printf("Student %d takes a seat, # of waiting students = %d\n", waiting_students);
-				printf("Waking TA up\n");
+				printf("		First Student %d takes a seat, # of waiting students = %d\n", order, waiting_students);
 				sem_post(&students_sem);
 			}else{
 				waiting_students++;
-				printf("Student %d takes a seat, # of waiting students = %d\n", order, waiting_students);
+				printf("		Student %d takes a seat, # of waiting students = %d\n", order, waiting_students);
 				sem_wait(&ta_sem);
 			}
-			printf("Student %d receiving help\n", waiting_students);
+			
+			helptime--;	
+			printf("Student %d receiving help, helptime %d\n", order, helptime);	
 		}else{ //go back to sleep
-			printf("Student %d will try later.\n", order);
+			printf("				Student %d will try later.\n", order);
 			sleep(sleeptime);
 		}
-
-	//end critical section
-	pthread_mutex_unlock(&mutex_lock);
-	
-	pthread_exit(NULL);
+		
+		if(helptime==0)
+			pthread_exit(0);
+		//end critical section
+		pthread_mutex_unlock(&mutex_lock);
+		
+	}
 }
 
 void* ta_thread(void* param){
@@ -57,17 +59,22 @@ void* ta_thread(void* param){
 		if(waiting_students==0){
 			printf("No student waiting, ta go to sleep\n");
 			sem_wait(&students_sem);
-		}else{
-			printf("Ta woke up\n");
+			waiting_students--;
+			printf("Helping a student for 3 seconds, # of waiting students = %d\n", waiting_students);
+			sleep(3);
+		}
+		if(waiting_students > 0){
 			waiting_students--;
 			printf("Helping a student for 3 seconds, # of waiting students = %d\n", waiting_students);
 			sleep(3);
 			if(waiting_students > 0){
 				printf("notifying %d students waiting\n", waiting_students);
 				sem_post(&ta_sem);
+				sem_post(&ta_sem);
 			}
-			
 		}
+		
+		
 		pthread_mutex_unlock(&mutex_lock);
 	}
 		
