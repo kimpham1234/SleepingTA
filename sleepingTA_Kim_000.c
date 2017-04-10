@@ -23,50 +23,46 @@ void* student_thread(void* param){
 	sleep(sleeptime);
 
 	while(helptime > 0){
-
-	//	pthread_mutex_lock(&mutex_lock);
-		//critical section
 		if(waiting_students < 2){
-		//	pthread_mutex_lock(&mutex_lock);
 			if(waiting_students==0){
-
+				//critical section
 				pthread_mutex_lock(&mutex_lock);
 				waiting_students++;
 				pthread_mutex_unlock(&mutex_lock);
 
+				//wake TA up
 				printf("		Student %d takes a seat, # of waiting studentsA = %d\n", order, waiting_students);
 				sem_post(&students_sem);
+
+				//sleep for a while
 				sleep(sleeptime);
-				sem_wait(&ta_sem); //here
+
+				//wait for TA
+				sem_wait(&ta_sem);
 				printf("Student %d receiving help\n", order);
 				helptime--;
 			}else{
-
+				//critical section
 				pthread_mutex_lock(&mutex_lock);
 				waiting_students++;
 				pthread_mutex_unlock(&mutex_lock);
 
+				//signaling ta
 				sem_post(&students_sem);
 				printf("		Student %d takes a seat, # of waiting students = %d\n", order, waiting_students);
+
+				//wait for ta
 				sem_wait(&ta_sem);
 				printf("Student %d receiving help\n", order);
 				sleep(sleeptime);
 				helptime--;
 			}
-		//	pthread_mutex_unlock(&mutex_lock);
-		//change 1 - uncomment this
-		//	printf("Student %d receiving help\n", order);
-		//	helptime--;
 		}else{ //go back to sleep
 			printf("			Student %d will try later.\n", order);
 			sleeptime = (rand_r(&seed)%3)+1;
 			printf("	Student %d is programming for %d seconds.\n", order, sleeptime);
 			sleep(sleeptime);
-
 		}
-
-		//end critical section
-	//	pthread_mutex_unlock(&mutex_lock);
 	}
 
 	pthread_exit(NULL);
@@ -75,7 +71,7 @@ void* student_thread(void* param){
 void* ta_thread(void* param){
 	while(0==0){
 		sem_wait(&students_sem);
-	//	pthread_mutex_lock(&mutex_lock);
+
 		while(waiting_students > 0){
 			pthread_mutex_lock(&mutex_lock);
 			waiting_students--;
@@ -85,7 +81,6 @@ void* ta_thread(void* param){
 			printf("Helping a student for 3 seconds, # of waiting students = %d\n", waiting_students);
 			sleep(MAX_SLEEP_TIME);
 		}
-	//	pthread_mutex_unlock(&mutex_lock);
 	}
 
 }
@@ -107,6 +102,7 @@ int main(){
 
 
 	long seeds[4] = {1,2,3,4};
+
 	//create thread
 	for(int i = 0; i < NUM_OF_STUDENTS+1; i++ ){
 		if(i < NUM_OF_STUDENTS)
@@ -114,6 +110,7 @@ int main(){
 		else pthread_create(&ta, &attr, ta_thread, NULL);
 	}
 
+	//joining all exit student thread
 	for(int i = 0;i < NUM_OF_STUDENTS; i++){
 		pthread_join(student[i], NULL);
 	}
